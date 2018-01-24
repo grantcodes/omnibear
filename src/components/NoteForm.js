@@ -1,7 +1,7 @@
 import {h, Component} from 'preact';
-import Header from './Header';
+import QuickActions from './QuickActions';
 import Message from './Message';
-import ChangeViewButtons from './ChangeViewButtons';
+import ChangeViewTabs from './ChangeViewTabs';
 import FormInputs from './FormInputs';
 import Footer from './Footer';
 import micropub from '../util/micropub';
@@ -19,7 +19,11 @@ export default class NoteForm extends Component {
     let entryUrl = null;
     let postType;
     const selectedEntry = localStorage.getItem('selectedEntry');
-    if (location.search.indexOf('reply=true') === -1) {
+    const settings = JSON.parse(localStorage.getItem('settings')) || {};
+    if (
+      location.search.indexOf('reply=true') === -1 &&
+      !settings.defaultToCurrentPage
+    ) {
       postType = NEW_NOTE;
     } else {
       if (selectedEntry) {
@@ -38,46 +42,65 @@ export default class NoteForm extends Component {
         h: 'entry',
         content: '',
         category: [],
-        'slug': '',
+        'mp-slug': '',
       },
       hasSelectedEntry: !!selectedEntry,
       isDisabled: false,
       isLoading: false,
+      settings: settings,
     };
   }
 
   render() {
+    const {
+      postType,
+      url,
+      isDisabled,
+      isLoading,
+      settings,
+      userDomain,
+      entry,
+      hasSelectedEntry,
+      errorMessage,
+    } = this.state;
+    const {handleSettings, handleLogout} = this.props;
     return (
       <div>
-        <Header
-          postType={this.state.postType}
-          url={this.state.url}
+        <ChangeViewTabs
+          postType={postType}
+          onChange={this.changeView}
+          hasSelectedEntry={hasSelectedEntry}
+        />
+        <QuickActions
+          postType={postType}
+          url={url}
           onLike={this.handleLike}
           onRepost={this.handleRepost}
           onReacji={this.handleReacji}
-          isDisabled={this.state.isLoading}
+          isDisabled={isLoading}
+          settings={settings}
         />
         <div className="container">
-          <div className="text-right">
-            <ChangeViewButtons
-              postType={this.state.postType}
-              onChange={this.changeView}
-              hasSelectedEntry={this.state.hasSelectedEntry}
-            />
-          </div>
+          <div className="text-right" />
           <FormInputs
-            entry={this.state.entry}
+            postType={postType}
+            entry={entry}
+            settings={settings}
             updateEntry={this.updateEntry}
             onSubmit={this.handleSubmit}
-            isDisabled={this.state.isDisabled}
-            isLoading={this.state.isLoading}
+            isDisabled={isDisabled}
+            isLoading={isLoading}
             ref={el => (this.form = el)}
           />
-          {this.state.errorMessage ? (
-            <Message type={MESSAGE_ERROR}>{this.state.errorMessage}</Message>
+          {errorMessage ? (
+            <Message type={MESSAGE_ERROR}>{errorMessage}</Message>
           ) : null}
         </div>
-        <Footer domain={this.state.userDomain} onLogout={this.props.handleLogout} />
+        <Footer
+          domain={userDomain}
+          onSettings={handleSettings}
+          onLogout={handleLogout}
+        />
       </div>
     );
   }
@@ -118,7 +141,7 @@ export default class NoteForm extends Component {
       });
   };
 
-  handleReacji = (emoji) => {
+  handleReacji = emoji => {
     if (!this.state.url) {
       return;
     }
@@ -176,10 +199,15 @@ export default class NoteForm extends Component {
   };
 
   postEntry(entry) {
+    const slugName = this.state.settings.slug;
     this.setState({
       isDisabled: true,
       isLoading: true,
     });
+    if (slugName) {
+      entry[slugName] = entry['mp-slug'];
+      delete entry['mp-slug'];
+    }
     return micropub.create(entry, 'form');
   }
 
