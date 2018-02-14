@@ -1,54 +1,63 @@
 import {h, Component} from 'preact';
 import QuickActions from './QuickActions';
-import Message from './Message';
+import Message from '../Message';
 import ChangeViewTabs from './ChangeViewTabs';
 import FormInputs from './FormInputs';
-import Footer from './Footer';
-import micropub from '../util/micropub';
+import Footer from '../Footer';
+import {getDraft, deleteDraft} from '../../util/draft';
+import {clone} from '../../util/utils';
+import micropub from '../../util/micropub';
 import {
   NEW_NOTE,
   PAGE_REPLY,
   ITEM_REPLY,
   MESSAGE_SUCCESS,
   MESSAGE_ERROR,
-} from '../constants';
+} from '../../constants';
+import {getSettings} from '../../util/settings';
 
 export default class NoteForm extends Component {
   constructor(props) {
     super(props);
-    let entryUrl = null;
-    let postType;
     const selectedEntry = localStorage.getItem('selectedEntry');
-    const settings = JSON.parse(localStorage.getItem('settings')) || {};
-    if (
-      location.search.indexOf('reply=true') === -1 &&
-      !settings.defaultToCurrentPage
-    ) {
-      postType = NEW_NOTE;
-    } else {
-      if (selectedEntry) {
-        postType = ITEM_REPLY;
-        entryUrl = selectedEntry;
-      } else {
-        postType = PAGE_REPLY;
-        entryUrl = localStorage.getItem('pageUrl');
-      }
-    }
+    const syndicateOptions = JSON.parse(localStorage.getItem('syndicateTo'));
+    const settings = getSettings();
+    const draft = getDraft();
     this.state = {
-      postType: postType,
-      url: entryUrl,
+      postType: this.getPostType(settings),
+      url: this.getEntryUrl(),
       userDomain: localStorage.getItem('domain'),
-      entry: {
-        h: 'entry',
-        content: '',
-        category: [],
-        'mp-slug': '',
-      },
+      entry: draft,
       hasSelectedEntry: !!selectedEntry,
       isDisabled: false,
       isLoading: false,
       settings: settings,
+      syndicateOptions,
     };
+  }
+
+  getPostType(settings) {
+    const selectedEntry = localStorage.getItem('selectedEntry');
+    if (
+      location.search.indexOf('reply=true') === -1 &&
+      !settings.defaultToCurrentPage
+    ) {
+      return NEW_NOTE;
+    }
+    if (selectedEntry) {
+      return ITEM_REPLY;
+    } else {
+      return PAGE_REPLY;
+    }
+  }
+
+  getEntryUrl() {
+    const selectedEntry = localStorage.getItem('selectedEntry');
+    if (selectedEntry) {
+      return selectedEntry;
+    } else {
+      return localStorage.getItem('pageUrl');
+    }
   }
 
   render() {
@@ -60,6 +69,7 @@ export default class NoteForm extends Component {
       settings,
       userDomain,
       entry,
+      syndicateOptions,
       hasSelectedEntry,
       errorMessage,
     } = this.state;
@@ -81,11 +91,11 @@ export default class NoteForm extends Component {
           settings={settings}
         />
         <div className="container">
-          <div className="text-right" />
           <FormInputs
             postType={postType}
             entry={entry}
             settings={settings}
+            syndicateOptions={syndicateOptions}
             updateEntry={this.updateEntry}
             onSubmit={this.handleSubmit}
             isDisabled={isDisabled}
@@ -166,9 +176,11 @@ export default class NoteForm extends Component {
 
   flashSuccessMessage(message, location) {
     this.props.userFeedback(message, MESSAGE_SUCCESS, location);
-    setTimeout(() => {
-      window.close();
-    }, 3000);
+    if (this.state.settings.closeAfterPosting) {
+      setTimeout(() => {
+        window.close();
+      }, 3000);
+    }
   }
 
   flashErrorMessage(message) {
@@ -191,24 +203,38 @@ export default class NoteForm extends Component {
     this.postEntry(entry)
       .then(location => {
         const type = this.state.postType === NEW_NOTE ? 'Note' : 'Reply';
+        deleteDraft();
         this.flashSuccessMessage(`${type} posted successfully`, location);
       })
       .catch(err => {
-        this.flashErrorMessage('Error posting Note');
+        console.error(err);
+        if (err.status >= 400 && err.status < 500) {
+          this.flashErrorMessage(
+            'Error authenticating to micropub endpoint. Try logging out and back in.'
+          );
+        } else {
+          this.flashErrorMessage('Error posting Note');
+        }
       });
   };
 
   postEntry(entry) {
-    const slugName = this.state.settings.slug;
     this.setState({
       isDisabled: true,
       isLoading: true,
     });
-    if (slugName) {
-      entry[slugName] = entry['mp-slug'];
-      delete entry['mp-slug'];
+    const aliasedEntry = clone(entry);
+    const slugName = this.state.settings.slug;
+    const syndicateName = this.state.settings.syndicateTo;
+    if (slugName && slugName !== 'mp-slug') {
+      aliasedEntry[slugName] = aliasedEntry['mp-slug'];
+      delete aliasedEntry['mp-slug'];
     }
-    return micropub.create(entry, 'form');
+    if (syndicateName && syndicateName !== 'mp-syndicate-to') {
+      aliasedEntry[syndicateName] = aliasedEntry['mp-syndicate-to'];
+      delete aliasedEntry['mp-syndicate-to'];
+    }
+    return micropub.create(aliasedEntry, 'form');
   }
 
   changeView = postType => {

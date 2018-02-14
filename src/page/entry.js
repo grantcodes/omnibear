@@ -52,7 +52,9 @@ function findTweet(el) {
   if (!element) {
     return false;
   }
-  const url = `https://twitter.com${element.getAttribute('data-permalink-path')}`;
+  const url = `https://twitter.com${element.getAttribute(
+    'data-permalink-path'
+  )}`;
   return {element, url};
 }
 
@@ -97,7 +99,9 @@ function findHEntry(el) {
       return findHEntry(element.parentElement, 'h-entry');
     }
   }
-
+  if (typeof url !== 'string') {
+    return false;
+  }
   return {element, url};
 }
 

@@ -1,19 +1,18 @@
 import {h, Component} from 'preact';
 import ReacjiSettings from './ReacjiSettings';
+import EndpointFields from './EndpointFields';
+import AuthenticationFields from './AuthenticationFields';
 import {DEFAULT_REACJI} from '../../constants';
+import {
+  getSettings,
+  saveSettings,
+  saveAuthenticationDetails,
+} from '../../util/settings';
 
 export default class SettingsForm extends Component {
   constructor(props) {
     super(props);
-    let settings = JSON.parse(localStorage.getItem('settings'));
-    if (!settings) {
-      settings = {
-        defaultToCurrentPage: false,
-        reacji: DEFAULT_REACJI,
-        slug: 'mp-slug',
-        autoSlug: false,
-      };
-    }
+    const settings = getSettings();
     settings.me = localStorage.getItem('domain');
     settings.micropubEndpoint = localStorage.getItem('micropubEndpoint');
     settings.token = localStorage.getItem('token');
@@ -24,9 +23,11 @@ export default class SettingsForm extends Component {
   render() {
     const {
       defaultToCurrentPage,
+      autoSlug,
+      closeAfterPosting,
       reacji,
       slug,
-      autoSlug,
+      syndicateTo,
       me,
       micropubEndpoint,
       token,
@@ -55,74 +56,27 @@ export default class SettingsForm extends Component {
               Automatically generate slug from post content
             </label>
 
-            <ReacjiSettings reacji={reacji} onChange={this.set('reacji')} />
-
-            <div>
-              <label htmlFor="slug">Slug</label>
+            <label>
               <input
-                id="slug"
-                type="text"
-                value={slug}
-                onChange={this.update('slug')}
+                type="checkbox"
+                checked={closeAfterPosting}
+                onChange={this.updateBoolean('closeAfterPosting')}
               />
-              <div class="settings-form__description">
-                Choose the name of the field that the slug will be sent in. This
-                should be <code>mp-slug</code> unless your endpoint is using a
-                custom property or the deprecated <code>slug</code> property.
-              </div>
-            </div>
+              Close Omnibear window after posting
+            </label>
 
-            <fieldset>
-              <legend>Authentication details (advanced)</legend>
-              <div class="settings-form__description">
-                These values are set automatically upon logging in. Only edit
-                them if you are having trouble authenticating and wish to do so
-                manually.
-              </div>
-
-              {showAuthenticationDetails ? (
-                [
-                  <div>
-                    <label htmlFor="me">Me (domain name)</label>
-                    <input
-                      id="me"
-                      type="text"
-                      value={me}
-                      onChange={this.update('me')}
-                      placeholder="https://example.com"
-                    />
-                  </div>,
-                  <div>
-                    <label htmlFor="mp-endpoint">Micropub endpoint</label>
-                    <input
-                      id="mp-endpoint"
-                      type="text"
-                      value={micropubEndpoint}
-                      onChange={this.update('micropubEndpoint')}
-                      placeholder="https://example.com/micropub"
-                    />
-                  </div>,
-                  <div>
-                    <label htmlFor="token">Token</label>
-                    <input
-                      id="token"
-                      type="text"
-                      value={token}
-                      onChange={this.update('token')}
-                    />
-                  </div>,
-                ]
-              ) : (
-                <div class="text-right">
-                  <button
-                    type="button"
-                    onClick={this.showAuthenticationDetails}
-                  >
-                    Show
-                  </button>
-                </div>
-              )}
-            </fieldset>
+            <ReacjiSettings reacji={reacji} onChange={this.set('reacji')} />
+            <EndpointFields
+              slug={slug}
+              syndicateTo={syndicateTo}
+              onChange={this.set}
+            />
+            <AuthenticationFields
+              me={me}
+              micropubEndpoint={micropubEndpoint}
+              token={token}
+              onChange={this.set}
+            />
 
             <div class="form-buttons">
               <button type="submit" className="button">
@@ -142,25 +96,19 @@ export default class SettingsForm extends Component {
     );
   }
 
-  showAuthenticationDetails = () => {
-    this.setState({
-      showAuthenticationDetails: true,
-    });
-  };
-
   update(fieldName) {
     return e => {
       this.set(fieldName)(e.target.value);
     };
   }
 
-  set(fieldName) {
+  set = fieldName => {
     return value => {
       this.setState({
         [fieldName]: value,
       });
     };
-  }
+  };
 
   updateBoolean(fieldName) {
     return e => {
@@ -172,33 +120,9 @@ export default class SettingsForm extends Component {
 
   save = e => {
     e.preventDefault();
-    const {
-      defaultToCurrentPage,
-      reacji,
-      slug,
-      autoSlug,
-      me,
-      token,
-      micropubEndpoint,
-    } = this.state;
-    localStorage.setItem(
-      'settings',
-      JSON.stringify({
-        defaultToCurrentPage,
-        reacji,
-        slug,
-        autoSlug,
-      })
-    );
-    if (me) {
-      localStorage.setItem('domain', me);
-    }
-    if (token) {
-      localStorage.setItem('token', token);
-    }
-    if (micropubEndpoint) {
-      localStorage.setItem('micropubEndpoint', micropubEndpoint);
-    }
+    const {me, token, micropubEndpoint} = this.state;
+    saveSettings(this.state);
+    saveAuthenticationDetails(me, token, micropubEndpoint);
     this.props.onClose();
   };
 }
