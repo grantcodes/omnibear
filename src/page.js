@@ -17,7 +17,7 @@ import {
         break;
     }
   }
-  chrome.runtime.onMessage.addListener(handleMessage);
+  browser.runtime.onMessage.addListener(handleMessage);
 
   if (!document.hidden) {
     sendFocusMessage();
@@ -41,7 +41,7 @@ import {
   }
 
   function sendFocusMessage() {
-    chrome.runtime.sendMessage({
+    browser.runtime.sendMessage({
       action: 'focus-window',
       payload: {
         selectedEntry: getCurrentItemUrl(),

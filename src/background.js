@@ -34,7 +34,7 @@ function handleBeginAuth(payload) {
   localStorage.setItem('authEndpoint', payload.metadata.authEndpoint);
   localStorage.setItem('tokenEndpoint', payload.metadata.tokenEndpoint);
   localStorage.setItem('micropubEndpoint', payload.metadata.micropub);
-  chrome.tabs.create({url: payload.authUrl}, tab => {
+  browser.tabs.create({url: payload.authUrl}, tab => {
     authTabId = tab.id;
   });
 }
@@ -71,7 +71,7 @@ function handleTabChange(tabId, changeInfo, tab) {
       return fetchSyndicationTargets();
     })
     .then(() => {
-      chrome.tabs.remove(tab.id);
+      browser.tabs.remove(tab.id);
       authTabId = null;
     })
     .catch(err => {
@@ -84,9 +84,9 @@ function isAuthRedirect(changeInfo) {
   return changeInfo.url && changeInfo.url.startsWith(url);
 }
 
-chrome.runtime.onMessage.addListener(handleMessage);
-chrome.tabs.onUpdated.addListener(handleTabChange);
-menuId = chrome.contextMenus.create({
+browser.runtime.onMessage.addListener(handleMessage);
+browser.tabs.onUpdated.addListener(handleTabChange);
+menuId = browser.contextMenus.create({
   title: 'Reply to entry',
   contexts: ['page', 'selection'],
   onclick: function() {

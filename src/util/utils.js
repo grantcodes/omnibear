@@ -1,7 +1,7 @@
 export function openLink(e) {
   e.preventDefault();
   if (e.target.href) {
-    chrome.tabs.create({url: e.target.href});
+    browser.tabs.create({url: e.target.href});
   }
 }
 
@@ -11,7 +11,7 @@ export function clone(obj) {
 
 export function getAuthTab() {
   return new Promise(function(resolve, reject) {
-    chrome.tabs.query({url: 'https://omnibear.com/auth/success*'}, function(
+    browser.tabs.query({url: 'https://omnibear.com/auth/success*'}, function(
       tabs
     ) {
       if (tabs.length) {
@@ -56,7 +56,7 @@ export function generateSlug(content) {
 export function getPageUrl() {
   return new Promise((resolve, reject) => {
     var tabId = localStorage.getItem('pageTabId');
-    chrome.tabs.get(Number(tabId), tab => {
+    browser.tabs.get(Number(tabId), tab => {
       resolve(tab.url);
     });
   });

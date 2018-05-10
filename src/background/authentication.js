@@ -8,7 +8,7 @@ export function validateMeDomainFromUrl(tabUrl) {
     var currentDomain = localStorage.getItem('domain');
 
     if (getUrlOrigin(currentDomain) !== getUrlOrigin(meFromUrl)) {
-      chrome.tabs.sendMessage(tab.id, {
+      browser.tabs.sendMessage(tab.id, {
         action: 'fetch-token-error',
         payload: {
           error: new Error(
@@ -43,7 +43,7 @@ export function fetchToken(code) {
     .catch(function(err) {
       console.log('error fetching token', err);
       getAuthTab().then(tab => {
-        chrome.tabs.sendMessage(tab.id, {
+        browser.tabs.sendMessage(tab.id, {
           action: 'fetch-token-error',
           payload: {
             error: err,

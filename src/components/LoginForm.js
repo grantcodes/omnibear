@@ -68,7 +68,7 @@ export default class LoginForm extends Component {
     micropub
       .getAuthUrl()
       .then(url => {
-        chrome.runtime.sendMessage({
+        browser.runtime.sendMessage({
           action: 'begin-auth',
           payload: {
             authUrl: url,

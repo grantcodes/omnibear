@@ -9,7 +9,7 @@ let currentItemUrl;
 
 export function clearItem() {
   if (currentItem) {
-    chrome.runtime.sendMessage({
+    browser.runtime.sendMessage({
       action: 'clear-entry',
     });
     removeHighlight();
@@ -38,7 +38,7 @@ export function focusClickedEntry(e) {
   if (!entry) {
     return;
   }
-  chrome.runtime.sendMessage({
+  browser.runtime.sendMessage({
     action: 'select-entry',
     payload: {url: entry.url},
   });
