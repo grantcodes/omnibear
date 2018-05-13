@@ -1,44 +1,44 @@
-import {h, Component} from 'preact';
-import QuickActions from './QuickActions';
-import Message from '../Message';
-import ChangeViewTabs from './ChangeViewTabs';
-import FormInputs from './FormInputs';
-import Footer from '../Footer';
-import {getDraft, deleteDraft} from '../../util/draft';
-import {clone} from '../../util/utils';
-import micropub from '../../util/micropub';
+import { h, Component } from "preact";
+import QuickActions from "./QuickActions";
+import Message from "../Message";
+import ChangeViewTabs from "./ChangeViewTabs";
+import FormInputs from "./FormInputs";
+import Footer from "../Footer";
+import { getDraft, deleteDraft } from "../../util/draft";
+import { clone } from "../../util/utils";
+import micropub from "../../util/micropub";
 import {
   NEW_NOTE,
   PAGE_REPLY,
   ITEM_REPLY,
   MESSAGE_SUCCESS,
-  MESSAGE_ERROR,
-} from '../../constants';
-import {getSettings, getSyndicateOptions} from '../../util/settings';
+  MESSAGE_ERROR
+} from "../../constants";
+import { getSettings, getSyndicateOptions } from "../../util/settings";
 
 export default class NoteForm extends Component {
   constructor(props) {
     super(props);
-    const selectedEntry = localStorage.getItem('selectedEntry');
+    const selectedEntry = localStorage.getItem("selectedEntry");
     const settings = getSettings();
     const draft = getDraft();
     this.state = {
       postType: this.getPostType(settings),
-      selectedEntry: localStorage.getItem('selectedEntry'),
-      userDomain: localStorage.getItem('domain'),
+      selectedEntry: localStorage.getItem("selectedEntry"),
+      userDomain: localStorage.getItem("domain"),
       entry: draft,
       hasSelectedEntry: !!selectedEntry,
       isDisabled: false,
       isLoading: false,
       settings: settings,
-      syndicateOptions: getSyndicateOptions(),
+      syndicateOptions: getSyndicateOptions()
     };
   }
 
   getPostType(settings) {
-    const selectedEntry = localStorage.getItem('selectedEntry');
+    const selectedEntry = localStorage.getItem("selectedEntry");
     if (
-      location.search.indexOf('reply=true') === -1 &&
+      location.search.indexOf("reply=true") === -1 &&
       !settings.defaultToCurrentPage
     ) {
       return NEW_NOTE;
@@ -72,9 +72,9 @@ export default class NoteForm extends Component {
       entry,
       syndicateOptions,
       hasSelectedEntry,
-      errorMessage,
+      errorMessage
     } = this.state;
-    const {handleSettings, handleLogout} = this.props;
+    const { handleSettings, handleLogout } = this.props;
     return (
       <div>
         <ChangeViewTabs
@@ -85,6 +85,7 @@ export default class NoteForm extends Component {
         <QuickActions
           postType={postType}
           url={this.getCurrentUrl()}
+          onDelete={this.handleDelete}
           onLike={this.handleLike}
           onRepost={this.handleRepost}
           onReacji={this.handleReacji}
@@ -122,16 +123,16 @@ export default class NoteForm extends Component {
       return;
     }
     this.postEntry({
-      h: 'entry',
-      'like-of': url,
+      h: "entry",
+      "like-of": url
     })
       .then(location => {
-        const type = this.state.postType === ITEM_REPLY ? 'Item' : 'Page';
+        const type = this.state.postType === ITEM_REPLY ? "Item" : "Page";
         this.flashSuccessMessage(`${type} liked successfully`, location);
       })
       .catch(err => {
         console.error(err);
-        this.flashErrorMessage('Error posting like');
+        this.flashErrorMessage("Error posting like");
       });
   };
 
@@ -141,16 +142,16 @@ export default class NoteForm extends Component {
       return;
     }
     this.postEntry({
-      h: 'entry',
-      'repost-of': url,
+      h: "entry",
+      "repost-of": url
     })
       .then(location => {
-        const type = this.state.postType === ITEM_REPLY ? 'Item' : 'Page';
+        const type = this.state.postType === ITEM_REPLY ? "Item" : "Page";
         this.flashSuccessMessage(`${type} reposted successfully`, location);
       })
       .catch(err => {
         console.error(err);
-        this.flashErrorMessage('Error reposting');
+        this.flashErrorMessage("Error reposting");
       });
   };
 
@@ -160,22 +161,38 @@ export default class NoteForm extends Component {
       return;
     }
     this.postEntry({
-      h: 'entry',
+      h: "entry",
       content: emoji,
-      'in-reply-to': url,
+      "in-reply-to": url
     })
       .then(location => {
-        const type = this.state.postType === ITEM_REPLY ? 'Item' : 'Page';
+        const type = this.state.postType === ITEM_REPLY ? "Item" : "Page";
         this.flashSuccessMessage(`${type} reacted to successfully`, location);
       })
       .catch(err => {
         console.error(err);
-        this.flashErrorMessage('Error reacting');
+        this.flashErrorMessage("Error reacting");
+      });
+  };
+
+  handleDelete = () => {
+    const url = this.getCurrentUrl();
+    if (!url) {
+      return;
+    }
+    micropub
+      .delete(url)
+      .then(() => {
+        this.flashSuccessMessage("Post deleted successfully");
+      })
+      .catch(err => {
+        console.error(err);
+        this.flashErrorMessage("Error deleting");
       });
   };
 
   updateEntry = newEntry => {
-    this.setState({entry: newEntry});
+    this.setState({ entry: newEntry });
   };
 
   flashSuccessMessage(message, location) {
@@ -191,22 +208,22 @@ export default class NoteForm extends Component {
     this.setState({
       errorMessage: message,
       isDisabled: false,
-      isLoading: false,
+      isLoading: false
     });
     setTimeout(() => {
       if (this.state.errorMessage === message) {
-        this.setState({errorMessage: false});
+        this.setState({ errorMessage: false });
       }
     }, 4000);
   }
 
   handleSubmit = entry => {
     if (this.state.postType !== NEW_NOTE) {
-      entry['in-reply-to'] = this.state.url;
+      entry["in-reply-to"] = this.state.url;
     }
     this.postEntry(entry)
       .then(location => {
-        const type = this.state.postType === NEW_NOTE ? 'Note' : 'Reply';
+        const type = this.state.postType === NEW_NOTE ? "Note" : "Reply";
         deleteDraft();
         this.flashSuccessMessage(`${type} posted successfully`, location);
       })
@@ -214,10 +231,10 @@ export default class NoteForm extends Component {
         console.error(err);
         if (err.status >= 400 && err.status < 500) {
           this.flashErrorMessage(
-            'Error authenticating to micropub endpoint. Try logging out and back in.'
+            "Error authenticating to micropub endpoint. Try logging out and back in."
           );
         } else {
-          this.flashErrorMessage('Error posting Note');
+          this.flashErrorMessage("Error posting Note");
         }
       });
   };
@@ -225,20 +242,20 @@ export default class NoteForm extends Component {
   postEntry(entry) {
     this.setState({
       isDisabled: true,
-      isLoading: true,
+      isLoading: true
     });
     const aliasedEntry = clone(entry);
     const slugName = this.state.settings.slug;
     const syndicateName = this.state.settings.syndicateTo;
-    if (slugName && slugName !== 'mp-slug') {
-      aliasedEntry[slugName] = aliasedEntry['mp-slug'];
-      delete aliasedEntry['mp-slug'];
+    if (slugName && slugName !== "mp-slug") {
+      aliasedEntry[slugName] = aliasedEntry["mp-slug"];
+      delete aliasedEntry["mp-slug"];
     }
-    if (syndicateName && syndicateName !== 'mp-syndicate-to') {
-      aliasedEntry[syndicateName] = aliasedEntry['mp-syndicate-to'];
-      delete aliasedEntry['mp-syndicate-to'];
+    if (syndicateName && syndicateName !== "mp-syndicate-to") {
+      aliasedEntry[syndicateName] = aliasedEntry["mp-syndicate-to"];
+      delete aliasedEntry["mp-syndicate-to"];
     }
-    return micropub.create(aliasedEntry, 'form');
+    return micropub.create(aliasedEntry, "form");
   }
 
   changeView = postType => {
@@ -248,13 +265,13 @@ export default class NoteForm extends Component {
         url = null;
         break;
       case PAGE_REPLY:
-        url = localStorage.getItem('pageUrl');
+        url = localStorage.getItem("pageUrl");
         break;
       case ITEM_REPLY:
-        url = localStorage.getItem('selectedEntry');
+        url = localStorage.getItem("selectedEntry");
         break;
     }
-    this.setState({url, postType});
+    this.setState({ url, postType });
     this.form.focus();
   };
 }

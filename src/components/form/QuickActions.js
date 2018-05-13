@@ -1,12 +1,12 @@
-import {h, Component} from 'preact';
+import { h, Component } from "preact";
 import {
   NEW_NOTE,
   PAGE_REPLY,
   ITEM_REPLY,
-  DEFAULT_REACJI,
-} from '../../constants';
-import HeartSvg from '../svg/HeartSvg';
-import RepostSvg from '../svg/RepostSvg';
+  DEFAULT_REACJI
+} from "../../constants";
+import HeartSvg from "../svg/HeartSvg";
+import RepostSvg from "../svg/RepostSvg";
 
 export default class QuickActions extends Component {
   render() {
@@ -26,13 +26,16 @@ export default class QuickActions extends Component {
   }
 
   renderQuickActions() {
-    const {settings} = this.props;
+    const { settings } = this.props;
     let reacji;
     if (settings && settings.reacji) {
       reacji = settings.reacji;
     } else {
       reacji = DEFAULT_REACJI;
     }
+
+    const isUserSite =
+      this.props.url.indexOf(localStorage.getItem("domain")) > -1;
 
     return (
       <ul className="quick-actions">
@@ -49,6 +52,16 @@ export default class QuickActions extends Component {
             <HeartSvg /> like
           </button>
         </li>
+        {isUserSite && (
+          <li>
+            <button
+              onClick={this.props.onDelete}
+              disabled={this.props.isDisabled}
+            >
+              X Delete
+            </button>
+          </li>
+        )}
         {reacji.map(this.renderReacji)}
       </ul>
     );
